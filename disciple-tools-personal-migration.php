@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return object|bool
  */
 function dt_personal_migration() {
-    $dt_personal_migration_required_dt_theme_version = '1.0';
+    $dt_personal_migration_required_dt_theme_version = '1.7.0';
     $wp_theme = wp_get_theme();
     $version = $wp_theme->version;
 
@@ -77,11 +77,18 @@ class DT_Personal_Migration {
 
     private function __construct() {
         $is_rest = dt_is_rest();
-        if ( 'settings' === dt_get_url_path() && ! $is_rest ) {
+
+        $url = dt_get_url_path();
+        if ( $is_rest && strpos( $url, 'dt_personal_migration') ) {
+            require_once('rest-api/rest-api.php' );
+        }
+
+        if ( 'settings' === $url && ! $is_rest ) {
             require_once( 'tile/settings-tile.php' );
         }
 
         require_once( 'magic-link/magic-link.php' );
+//        require_once( 'tile/additional-field.php' );
 
         $this->i18n();
 

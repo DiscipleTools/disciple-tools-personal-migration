@@ -7,7 +7,7 @@ class DT_Personal_Migration_Magic_Link  {
 
 
     public $page_title = 'Personal Migration';
-    public $root = "dt_personal_migration_app";
+    public $root = "personal_migration_app";
     public $type = 'export';
     public $public_key = '';
     public $type_name = 'Personal Migration Export';
@@ -15,6 +15,7 @@ class DT_Personal_Migration_Magic_Link  {
     public $type_actions = [
         '' => "Manage",
     ];
+    public $user_id = 0;
 
     private static $_instance = null;
     public static function instance() {
@@ -32,22 +33,31 @@ class DT_Personal_Migration_Magic_Link  {
 
         $parts = explode( '/', $url);
         if ( isset( $parts[2] ) && ! empty( $parts[2] ) ) {
-            $this->public_key = $url_public_key = $parts[2];
 
-            $current_user_public_key = hash('sha256', serialize( get_current_user() ) );
-            if ( $url_public_key !== $current_user_public_key ) {
+            // test for enabled key
+            $this->public_key = $url_public_key = $parts[2];
+            global $wpdb;
+            $row = $wpdb->get_row($wpdb->prepare(
+                "SELECT *
+                        FROM $wpdb->usermeta
+                        WHERE meta_key = %s
+                          AND meta_value = %s;"
+                , $wpdb->prefix . 'personal_migration_app_export', $this->public_key ), ARRAY_A );
+            if ( empty( $row ) ) {
                 return;
             }
+            $this->user_id = $row['user_id'];
 
             add_filter( 'dt_templates_for_urls', [ $this, 'register_url' ], 199, 1 );
-            add_filter( 'dt_json_download', [ $this, 'dt_json_download'] );
-
-            // load if valid url
+            add_filter( 'dt_allow_non_login_access', function (){
+                return true;
+            }, 100, 1 );
             add_action( 'dt_json_access', [ $this, 'dt_json_access'] );
             add_action( 'dt_json_content', [ $this, 'dt_json_content' ] ); // body for no post key
         }
 
     }
+
 
     public function dt_json_access( $access ) {
         return true;
@@ -82,7 +92,13 @@ class DT_Personal_Migration_Magic_Link  {
     }
 
     public function dt_json_content(){
-        $c = DT_Posts::list_posts( 'contacts', [ 'assigned_to' => [ 'me' ] ] );
+
+//        $data = get_transient( __METHOD__ . $this->user_id );
+//        if ( $data ) {
+//            return $data;
+//        }
+
+        $c = DT_Posts::list_posts( 'contacts', [ 'assigned_to' => [ $this->user_id ] ], false );
         $contacts_total = $c['total'];
         $contacts = [];
         foreach( $c['posts'] as $value ){
@@ -96,7 +112,7 @@ class DT_Personal_Migration_Magic_Link  {
                 $contact_comments_total = $contact_comments_total + count( $contact_comments[$contact['ID']] );
             }
         }
-        $g = DT_Posts::list_posts( 'groups', [ 'assigned_to' => [ 'me' ] ] );
+        $g = DT_Posts::list_posts( 'groups', [ 'assigned_to' => [ $this->user_id ] ], false );
         $groups_total = $g['total'];
         $groups = [];
         foreach( $g['posts'] as $value ){
@@ -111,17 +127,37 @@ class DT_Personal_Migration_Magic_Link  {
             }
         }
 
-        return [
-            'contacts' => $contacts,
-            'contacts_total' => $contacts_total,
-            'contact_comments' => $contact_comments,
-            'contact_comments_total' => $contact_comments_total,
-            'groups' => $groups,
-            'groups_total' => $groups_total,
-            'group_comments' => $group_comments,
-            'group_comments_total' => $group_comments_total,
-            'connections' => [],
+        $contact_fields = DT_Posts::get_post_field_settings( 'contacts' );
+        $group_fields = DT_Posts::get_post_field_settings( 'groups' );
+
+        $data = [
+            'contacts' => [
+                'source_posts' => $contacts,
+                'source_total' => (int) $contacts_total,
+                'source_comments' => $contact_comments,
+                'source_comments_total' => $contact_comments_total,
+                'source_fields' => $contact_fields,
+                'transferred_posts' => [],
+                'transferred_comments' => [],
+                'transferred_connections' => [],
+                'not_transferred' => [],
+            ],
+            'groups' => [
+                'source_posts' => $groups,
+                'source_total' => (int) $groups_total,
+                'source_comments' => $group_comments,
+                'source_comments_total' => $group_comments_total,
+                'source_fields' => $group_fields,
+                'transferred_posts' => [],
+                'transferred_comments' => [],
+                'transferred_connections' => [],
+                'not_transferred' => [],
+            ],
         ];
+
+//        set_transient( __METHOD__ . $this->user_id, $data, MINUTE_IN_SECONDS * 5 );
+
+        return $data;
     }
 
 
