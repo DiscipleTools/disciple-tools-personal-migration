@@ -3,6 +3,9 @@ if ( !defined( 'ABSPATH' ) ) { exit; } // Exit if accessed directly.
 
 class DT_Personal_Migration_Settings_Tile
 {
+    public $root = "personal_migration_app";
+    public $type = 'export';
+
     private static $_instance = null;
     public static function instance()
     {
@@ -18,7 +21,6 @@ class DT_Personal_Migration_Settings_Tile
             add_action( 'dt_profile_settings_page_menu', [ $this, 'dt_profile_settings_page_menu' ], 100, 4 );
             add_action( 'dt_profile_settings_page_sections', [ $this, 'dt_profile_settings_page_sections' ], 100, 4 );
             add_action( 'dt_modal_help_text', [ $this, 'dt_modal_help_text' ], 100 );
-            add_filter( 'dt_settings_apps_list', [ $this, 'dt_settings_apps_list' ] , 50, 1 );
         }
     }
 
@@ -33,18 +35,6 @@ class DT_Personal_Migration_Settings_Tile
         }
 
         return $fields;
-    }
-
-    public function dt_settings_apps_list( $apps_list ){
-        $root = 'personal_migration_app';
-        $type = 'export';
-        $apps_list[$root.'_'.$type] = [
-            'key' => $root.'_'.$type,
-            'url_base' => $root. '/'. $type,
-            'label' => __( 'Personal Migration', 'disciple_tools' ),
-            'description' => __( 'Enable personal migration export link.', 'disciple_tools' ),
-        ];
-        return $apps_list;
     }
 
     /**
@@ -70,18 +60,41 @@ class DT_Personal_Migration_Settings_Tile
      * @param $contact_fields array Array of fields on the contact record
      */
     public function dt_profile_settings_page_sections( $dt_user, $dt_user_meta, $dt_user_contact_id, $contact_fields  ) {
-//        $url = trailingslashit( site_url() ) . 'dt_personal_migration_app/export/' . $current_user_public_key = hash('sha256', serialize( get_current_user() ) );
+        global $wpdb;
+        $app_key = 'personal_migration_app_export';
+        $app_url_base = trailingslashit( trailingslashit( site_url() ) . 'personal_migration_app/export' );
+        $dt_personal_migration_is_enabled = isset($dt_user_meta[$wpdb->prefix . $app_key][0]) ? $dt_user_meta[$wpdb->prefix . $app_key][0] : false;
+        $app_url = '';
+        if ( $dt_personal_migration_is_enabled ) {
+            $app_url = $app_url_base . $dt_personal_migration_is_enabled;
+        }
         ?>
+        <style>
+            .dt_personal_migration_hide {
+                display:none;
+            }
+        </style>
         <div class="cell bordered-box" id="dt_personal_migration_settings_id" data-magellan-target="dt_personal_migration_settings_id">
             <button class="help-button float-right" data-section="disciple-tools-personal-migration-help-text">
                 <img class="help-icon" src="<?php echo esc_html( get_template_directory_uri() . '/dt-assets/images/help.svg' ) ?>"/>
             </button>
 
             <span class="section-header"><?php esc_html_e( 'Personal Migration', 'disciple_tools' )?></span>
+
             <hr/>
 
-            <!--<a class="button small" href="<?php /*echo esc_url( $url ) */?>">Export</a>-->
-            <button type="button" class="button small" id="dt_personal_migration_import_button">Import</button>
+            <button type="button" class="button" id="dt_personal_migration_import_button">Import</button>
+            <button type="button" class="button" id="dt_personal_migration_export_button"><?php echo ( $dt_personal_migration_is_enabled ) ? esc_html( 'Disable Export' ) : esc_html( 'Enable Export' ); ?></button>
+            <span class="loading-spinner"></span>
+            <div id="dt_personal_migration_export_link" class="<?php echo ( $dt_personal_migration_is_enabled ) ? '' : 'dt_personal_migration_hide'; ?>">
+                <div class="input-group">
+                    <span class="input-group-label">Current Export Link</span>
+                    <input class="input-group-field" type="text" id="dt_personal_migration_export_input" value="<?php echo ( $dt_personal_migration_is_enabled ) ? $app_url : ''; ?>">
+                    <div class="input-group-button">
+                        <input type="button" class="button" id="dt_personal_migration_export_copy" value="Copy Link">
+                    </div>
+                </div>
+            </div>
             <script>
                 jQuery(document).ready(function(){
                     jQuery('#dt_personal_migration_import_button').on('click', function(){
@@ -95,7 +108,7 @@ class DT_Personal_Migration_Settings_Tile
                                 <div class="cell">
                                       Import JSON URL <br>
                                     <div class="input-group">
-                                      <input class="input-group-field" type="text" id="dt-personal-migration-migration-initiate-input" placeholder="add JSON url" value="https://colorado.zume.community/personal_migration_app/export/2098e1218896d6a31edd705c951ffcd81db2a904b41cc4b317dfe9d572283b82">
+                                      <input class="input-group-field" type="text" id="dt-personal-migration-migration-initiate-input" placeholder="add JSON url" value="https://colorado.zume.community/personal_migration_app/export/0eec228a9a0b6716dde659d11524fac2881593e3b401ff0afa983444f84107a8">
                                       <div class="input-group-button">
                                         <input type="submit" class="button" value="Transfer" id="dt-personal-migration-migration-initiate-button">
                                       </div>
@@ -167,6 +180,56 @@ class DT_Personal_Migration_Settings_Tile
                         }
 
 
+                    })
+
+                    jQuery('#dt_personal_migration_export_button').on('click', function(){
+                        let spinner = jQuery('.loading-spinner')
+                        spinner.addClass('active')
+                        let button = jQuery('#dt_personal_migration_export_button')
+                        let input = jQuery('#dt_personal_migration_export_input')
+                        let input_section = jQuery('#dt_personal_migration_export_link')
+                        let app_url_base = '<?php echo $app_url_base ?>'
+                        makeRequest('post', 'users/app_switch', { app_key: '<?php echo esc_attr( $app_key ) ?>'})
+                            .done(function(data) {
+                                console.log(data)
+                                if ('removed' === data) {
+                                    button.html('Enable Export')
+                                    input.empty()
+                                    input_section.addClass('dt_personal_migration_hide')
+                                } else {
+                                    button.html('Disable Export')
+                                    input.val( app_url_base + data)
+                                    input_section.removeClass('dt_personal_migration_hide')
+                                }
+                                spinner.removeClass('active')
+                            })
+                            .fail(function (err) {
+                                console.log("error");
+                                console.log(err);
+                                // a.empty().html(`error`)
+                            });
+                    })
+
+                    jQuery('#dt_personal_migration_export_copy').on('click', function(){
+                        let str = jQuery('#dt_personal_migration_export_input').val()
+                        const el = document.createElement('textarea');
+                        el.value = str;
+                        el.setAttribute('readonly', '');
+                        el.style.position = 'absolute';
+                        el.style.left = '-9999px';
+                        document.body.appendChild(el);
+                        const selected =
+                            document.getSelection().rangeCount > 0
+                                ? document.getSelection().getRangeAt(0)
+                                : false;
+                        el.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(el);
+                        if (selected) {
+                            document.getSelection().removeAllRanges();
+                            document.getSelection().addRange(selected);
+                        }
+                        alert('Copied')
                     })
                 })
             </script>

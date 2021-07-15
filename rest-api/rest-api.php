@@ -110,10 +110,12 @@ class DT_Personal_Migration_Endpoints
                 "pm_post_id" => $contact['ID']
             ];
 
-            if ( 'contacts'===$post_type) {
+            // adjust for post type status
+            if ( 'contacts'=== $post_type) {
                 $fields['overall_status'] = $contact['overall_status']['key'] ?? 'active';
+                $fields['type'] = 'personal';
             }
-            else if ( 'groups'===$post_type){
+            else if ( 'groups' === $post_type){
                 $fields['group_status'] = $contact['group_status']['key'] ?? 'active';
             }
             else {
@@ -126,6 +128,7 @@ class DT_Personal_Migration_Endpoints
                 dt_write_log($new_contact);
             } else {
                 // move source to transferred
+                $data[$post_type]['map'][$contact['ID']] = $new_contact['ID'];
                 $data[$post_type]['transferred_posts'][$new_contact['ID']] = $contact;
 
                 // unset source
@@ -282,27 +285,153 @@ class DT_Personal_Migration_Endpoints
                 'next_action' => 'install_comments_'.$post_type,
             ];
         }
-
     }
 
     public function install_comments( $post_type ){
+        global $wpdb;
+
         $data = get_transient('dt_personal_migration_' . get_current_user_id() );
+        if ( ! isset( $data[$post_type]['source_comments'] ) || empty( $data[$post_type]['source_comments'] ) ) {
+            return [
+                'message' => 'Successfully installed install_comments_'.$post_type.'!',
+                'next_action' => 'install_connections_'.$post_type,
+            ];
+        }
 
-        set_transient('dt_personal_migration_' . get_current_user_id(), $data, HOUR_IN_SECONDS );
+        $map = $data[$post_type]['map'];
 
-        return [
-            'message' => 'Successfully installed install_comments_'.$post_type.'!',
-            'next_action' => 'install_connections_'.$post_type,
-        ];
+        $loop_limit = 100;
+        $user = get_currentuserinfo();
+
+        $total = count( $data[$post_type]['source_comments'] );
+        $loop = 0;
+        foreach( $data[$post_type]['source_comments'] as $index => $comment_set ) {
+
+            foreach ($comment_set as $comment_data) {
+                // map new post id
+                if (!isset($map[$comment_data['comment_post_ID']])) {
+                    dt_write_log('Failed to find matching source post id.');
+                    continue;
+                }
+                $comment_post_ID = $map[$comment_data['comment_post_ID']];
+
+                // clean PII
+                $comment_data['comment_author_IP'] = '';
+                $comment_data['comment_author_url'] = '';
+                $comment_data['comment_author_email'] = $user->user_email;
+                $comment_data['user_id'] = $user->ID;
+
+                $comment_author = $comment_data['comment_author_IP'];
+                $comment_author_email = $user->user_email;
+                $comment_author_url = '';
+                $comment_author_IP = '';
+                $comment_date = $comment_data['comment_date'];
+                $comment_date_gmt = $comment_data['comment_date_gmt'];
+                $comment_content = $comment_data['comment_content'];
+                $comment_karma = $comment_data['comment_karma'];
+                $comment_approved = $comment_data['comment_approved'];
+                $comment_agent = $comment_data['comment_agent'];
+                $comment_type = $comment_data['comment_type'];
+                $comment_parent = $comment_data['comment_parent'];
+                $user_id = $user->ID;
+
+                // insert comment
+                $new_comment_result = $wpdb->query($wpdb->prepare(
+                    "INSERT INTO $wpdb->comments
+                    (
+                    comment_post_ID,
+                    comment_author,
+                    comment_author_email,
+                    comment_author_url,
+                    comment_author_IP,
+                    comment_date,
+                    comment_date_gmt,
+                    comment_content,
+                    comment_karma,
+                    comment_approved,
+                    comment_agent,
+                    comment_type,
+                    comment_parent,
+                    user_id
+                    )
+                    VALUES (
+                      %s,
+                      %s,
+                      %s,
+                      %s,
+                      %s,
+                      %s,
+                      %s,
+                      %s,
+                      %s,
+                      %s,
+                      %s,
+                      %s,
+                      %s,
+                      %s
+                    )
+                ",
+                    $comment_post_ID,
+                    $comment_author,
+                    $comment_author_email,
+                    $comment_author_url,
+                    $comment_author_IP,
+                    $comment_date,
+                    $comment_date_gmt,
+                    $comment_content,
+                    $comment_karma,
+                    $comment_approved,
+                    $comment_agent,
+                    $comment_type,
+                    $comment_parent,
+                    $user_id
+                ));
+
+                dt_write_log($new_comment_result);
+
+            }
+
+            // move source to transferred
+            $data[$post_type]['transferred_comments'][$map[$index]] = $comment_set;
+
+            // unset source
+            unset( $data[$post_type]['source_comments'][$index] );
+
+            $loop++;
+            if ( $loop > $loop_limit ) {
+                break;
+            }
+        }
+
+        set_transient('dt_personal_migration_' . get_current_user_id(), $data, HOUR_IN_SECONDS ); // save modified array
+
+        if ( $total > $loop_limit ) {
+            return [
+                'message' => 'Loop',
+                'next_action' => 'install_comments_'.$post_type,
+            ];
+        } else {
+            return [
+                'message' => 'Successfully installed install_comments_'.$post_type.'!',
+                'next_action' => 'install_connections_'.$post_type,
+            ];
+        }
     }
 
     public function install_connections( $post_type ){
         $data = get_transient('dt_personal_migration_' . get_current_user_id() );
 
-        unset($data[$post_type]);
+        $connections = $data[$post_type]['transferred_connections'];
+        dt_write_log($connections);
 
+
+
+
+        // clean up finished post type
+        unset($data[$post_type]);
         set_transient('dt_personal_migration_' . get_current_user_id(), $data, HOUR_IN_SECONDS );
 
+        // determine next series of actions or finish
         if ( isset( $data['contacts'] ) ) {
             return [
                 'message' => 'Successfully installed install_connections_'.$post_type.'!',

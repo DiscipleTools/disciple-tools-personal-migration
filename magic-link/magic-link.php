@@ -98,7 +98,17 @@ class DT_Personal_Migration_Magic_Link  {
 //            return $data;
 //        }
 
-        $c = DT_Posts::list_posts( 'contacts', [ 'assigned_to' => [ $this->user_id ] ], false );
+        $c = DT_Posts::list_posts(
+            'contacts', [
+            'assigned_to' => [ $this->user_id ],
+//            'share_with' => $this->user_id,
+//            'type' => [ 'personal' ]
+        ], false );
+        if ( is_wp_error( $c ) ) {
+            return [
+                'fail' => $c
+            ];
+        }
         $contacts_total = $c['total'];
         $contacts = [];
         foreach( $c['posts'] as $value ){
@@ -141,6 +151,7 @@ class DT_Personal_Migration_Magic_Link  {
                 'transferred_comments' => [],
                 'transferred_connections' => [],
                 'not_transferred' => [],
+                'map' => [],
             ],
             'groups' => [
                 'source_posts' => $groups,
@@ -152,6 +163,7 @@ class DT_Personal_Migration_Magic_Link  {
                 'transferred_comments' => [],
                 'transferred_connections' => [],
                 'not_transferred' => [],
+                'map' => [],
             ],
         ];
 
