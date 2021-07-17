@@ -242,10 +242,10 @@ class DT_Personal_Migration_Endpoints
 
         // Development override
         $arr = array(
-            "ssl" =>array(
-                "verify_peer" =>false,
-                "verify_peer_name" =>false,
-            ),
+//            "ssl" =>array(
+//                "verify_peer" =>false,
+//                "verify_peer_name" =>false,
+//            ),
         );
 
         $json_package = file_get_contents( $data['url'], false, stream_context_create( $arr ) );

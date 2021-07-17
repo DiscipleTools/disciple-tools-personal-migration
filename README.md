@@ -48,5 +48,12 @@ system for git. For a more details on contribution see the
 
 
 ## Screenshots
+Import Tile Added to Settings Page
+![screenshot](documentation/tile-screen.png)
 
-![screenshot](documentation/banner.png)
+Screen to Import URL and Begin Migration
+![screenshot](documentation/import-url-screen.png)
+
+Processing Page as Records are copied between systems
+![screenshot](documentation/import-screen.png)
+
