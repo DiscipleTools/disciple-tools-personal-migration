@@ -15,7 +15,7 @@ class DT_Personal_Migration_Fields {
 
     public function dt_custom_fields_settings( $fields, $post_type ){
         if ( $post_type === 'contacts' || $post_type === 'groups' ){
-            $fields["pm_post_id"] = [
+            $fields["pm_transfer_key"] = [
                 'name'        => __( 'Personal Migration Post ID', 'disciple_tools' ),
                 'type'        => 'text',
                 'default'     => '',

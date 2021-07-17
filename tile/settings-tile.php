@@ -7,16 +7,14 @@ class DT_Personal_Migration_Settings_Tile
     public $type = 'export';
 
     private static $_instance = null;
-    public static function instance()
-    {
-        if (is_null(self::$_instance)) {
+    public static function instance() {
+        if (is_null( self::$_instance )) {
             self::$_instance = new self();
         }
         return self::$_instance;
     }
 
-    public function __construct()
-    {
+    public function __construct() {
         if ( 'settings' === dt_get_url_path() ) {
             add_action( 'dt_profile_settings_page_menu', [ $this, 'dt_profile_settings_page_menu' ], 100, 4 );
             add_action( 'dt_profile_settings_page_sections', [ $this, 'dt_profile_settings_page_sections' ], 100, 4 );
@@ -26,7 +24,7 @@ class DT_Personal_Migration_Settings_Tile
 
     public function dt_custom_fields_settings( $fields, $post_type ){
         if ( $post_type === 'contacts' || $post_type === 'groups' ){
-            $fields["pm_post_id"] = [
+            $fields["pm_transfer_key"] = [
                 'name'        => __( 'Personal Migration Post ID', 'disciple_tools' ),
                 'type'        => 'text',
                 'default'     => '',
@@ -59,11 +57,11 @@ class DT_Personal_Migration_Settings_Tile
      * @param $dt_user_contact_id bool/int returns either id for contact connected to user or false
      * @param $contact_fields array Array of fields on the contact record
      */
-    public function dt_profile_settings_page_sections( $dt_user, $dt_user_meta, $dt_user_contact_id, $contact_fields  ) {
+    public function dt_profile_settings_page_sections( $dt_user, $dt_user_meta, $dt_user_contact_id, $contact_fields ) {
         global $wpdb;
         $app_key = 'personal_migration_app_export';
         $app_url_base = trailingslashit( trailingslashit( site_url() ) . 'personal_migration_app/export' );
-        $dt_personal_migration_is_enabled = isset($dt_user_meta[$wpdb->prefix . $app_key][0]) ? $dt_user_meta[$wpdb->prefix . $app_key][0] : false;
+        $dt_personal_migration_is_enabled = isset( $dt_user_meta[$wpdb->prefix . $app_key][0] ) ? $dt_user_meta[$wpdb->prefix . $app_key][0] : false;
         $app_url = '';
         if ( $dt_personal_migration_is_enabled ) {
             $app_url = $app_url_base . $dt_personal_migration_is_enabled;
@@ -84,12 +82,12 @@ class DT_Personal_Migration_Settings_Tile
             <hr/>
 
             <button type="button" class="button" id="dt_personal_migration_import_button">Import</button>
-            <button type="button" class="button" id="dt_personal_migration_export_button"><?php echo ( $dt_personal_migration_is_enabled ) ? esc_html( 'Disable Export' ) : esc_html( 'Enable Export' ); ?></button>
+            <button type="button" class="button" id="dt_personal_migration_export_button"><?php echo empty( $dt_personal_migration_is_enabled ) ? esc_html( 'Enable Export' ) : esc_html( 'Disable Export' ); ?></button>
             <span class="loading-spinner"></span>
-            <div id="dt_personal_migration_export_link" class="<?php echo ( $dt_personal_migration_is_enabled ) ? '' : 'dt_personal_migration_hide'; ?>">
+            <div id="dt_personal_migration_export_link" class="<?php echo empty( $dt_personal_migration_is_enabled ) ? 'dt_personal_migration_hide' : ''; ?>">
                 <div class="input-group">
                     <span class="input-group-label">Current Export Link</span>
-                    <input class="input-group-field" type="text" id="dt_personal_migration_export_input" value="<?php echo ( $dt_personal_migration_is_enabled ) ? $app_url : ''; ?>">
+                    <input class="input-group-field" type="text" id="dt_personal_migration_export_input" value="<?php echo empty( $dt_personal_migration_is_enabled ) ? '' : esc_url( $app_url ); ?>">
                     <div class="input-group-button">
                         <input type="button" class="button" id="dt_personal_migration_export_copy" value="Copy Link">
                     </div>
@@ -108,7 +106,7 @@ class DT_Personal_Migration_Settings_Tile
                                 <div class="cell">
                                       Import JSON URL <br>
                                     <div class="input-group">
-                                      <input class="input-group-field" type="text" id="dt-personal-migration-migration-initiate-input" placeholder="add JSON url" value="https://colorado.zume.community/personal_migration_app/export/0eec228a9a0b6716dde659d11524fac2881593e3b401ff0afa983444f84107a8">
+                                      <input class="input-group-field" type="text" id="dt-personal-migration-migration-initiate-input" placeholder="add JSON url">
                                       <div class="input-group-button">
                                         <input type="submit" class="button" value="Transfer" id="dt-personal-migration-migration-initiate-button">
                                       </div>
@@ -123,10 +121,14 @@ class DT_Personal_Migration_Settings_Tile
                         let progress = jQuery('#dt-personal-migration-migration-progress')
 
                         jQuery('#dt-personal-migration-migration-initiate-button').on('click', () => {
+
+
                             let url = jQuery('#dt-personal-migration-migration-initiate-input').val()
                             if ( url === '' ){
                                 return
                             }
+
+                            jQuery('#dt-personal-migration-migration-initiate-button').prop('disabled', true )
 
                             /* @todo check for compliant url https, etc. */
 
@@ -135,11 +137,13 @@ class DT_Personal_Migration_Settings_Tile
                                 <div class="cell" id="dt-personal-migration-install_contacts"><span class="loading-spinner active"></span></div>
                                 <div class="cell" id="dt-personal-migration-install_meta_contacts"><span class="loading-spinner active"></span></div>
                                 <div class="cell" id="dt-personal-migration-install_comments_contacts"><span class="loading-spinner active"></span></div>
-                                <div class="cell" id="dt-personal-migration-install_connections_contacts"><span class="loading-spinner active"></span></div>
                                 <div class="cell" id="dt-personal-migration-install_groups"><span class="loading-spinner active"></span></div>
                                 <div class="cell" id="dt-personal-migration-install_meta_groups"><span class="loading-spinner active"></span></div>
                                 <div class="cell" id="dt-personal-migration-install_comments_groups"><span class="loading-spinner active"></span></div>
-                                <div class="cell" id="dt-personal-migration-install_connections_groups"><span class="loading-spinner active"></span></div>
+                                <div class="cell" id="dt-personal-migration-install_contacts_to_contacts"><span class="loading-spinner active"></span></div>
+                                <div class="cell" id="dt-personal-migration-install_groups_to_groups"><span class="loading-spinner active"></span></div>
+                                <div class="cell" id="dt-personal-migration-install_contacts_to_groups"><span class="loading-spinner active"></span></div>
+                                <div class="cell" id="dt-personal-migration-install_groups_to_contacts"><span class="loading-spinner active"></span></div>
                                 `
                             )
 
@@ -152,7 +156,7 @@ class DT_Personal_Migration_Settings_Tile
                                     }
                                 })
                                 .fail(function (err) {
-                                    jQuery('#dt-personal-migration-load-data').html(`Data failed in collection from other system!`).append(stringify(err))
+                                    progress.html(`Data failed in collection from other system!<br><br> ` + err.responseText)
                                     console.log("error");
                                     console.log(err);
                                 });
@@ -188,7 +192,7 @@ class DT_Personal_Migration_Settings_Tile
                         let button = jQuery('#dt_personal_migration_export_button')
                         let input = jQuery('#dt_personal_migration_export_input')
                         let input_section = jQuery('#dt_personal_migration_export_link')
-                        let app_url_base = '<?php echo $app_url_base ?>'
+                        let app_url_base = '<?php echo esc_url( $app_url_base ) ?>'
                         makeRequest('post', 'users/app_switch', { app_key: '<?php echo esc_attr( $app_key ) ?>'})
                             .done(function(data) {
                                 console.log(data)

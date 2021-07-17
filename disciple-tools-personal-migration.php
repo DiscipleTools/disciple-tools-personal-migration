@@ -79,8 +79,8 @@ class DT_Personal_Migration {
         $is_rest = dt_is_rest();
 
         $url = dt_get_url_path();
-        if ( $is_rest && strpos( $url, 'dt_personal_migration') ) {
-            require_once('rest-api/rest-api.php' );
+        if ( $is_rest && strpos( $url, 'dt_personal_migration' ) ) {
+            require_once( 'rest-api/rest-api.php' );
         }
 
         if ( 'settings' === $url && ! $is_rest ) {
