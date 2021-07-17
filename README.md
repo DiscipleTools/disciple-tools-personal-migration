@@ -1,30 +1,32 @@
 [![Build Status](https://travis-ci.com/DiscipleTools/disciple-tools-personal-migration.svg?branch=master)](https://travis-ci.com/DiscipleTools/disciple-tools-personal-migration)
 
-# Disciple Tools - Name
+# Disciple Tools - Personal Migration
 
-Description Description Description Description Description Description Description
-Description Description Description Description Description Description Description
+Allow users to migrate their contacts and groups to another Disciple Tools system. This plugin adds a section to the
+users settings page and allows them to a personal migration to anoter system.
 
 ## Purpose
 
-Purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose
-Purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose
+For situations where a multiplier is moving their work from one team or system to another team or system.
 
-Purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose
-Purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose
+This plugin supports copying of 2000 contacts and 1000 groups from one system to another. It excludes any contacts labeled as "Access" and
+includes all contacts and groups that are shared with the user.
 
 ## Usage
 
 #### Will Do
 
-- Item
-- Item
-- Item
+- Gives users power to copy their data between systems
+- Copy 2000 contacts and details
+- Copy 1000 groups and details
+- Copy all associated comments
+- Rebuilds generational connections and cross-references
 
 #### Will Not Do
 
-- Item
-- Item
+- Does not copy contacts labeled "access" unless granted access
+- Limited to 2000 contacts per site
+- Limited to 1000 groups per site
 
 ## Requirements
 
