@@ -249,7 +249,21 @@ class DT_Personal_Migration_Settings_Tile
         ?>
         <div class="help-section" id="disciple-tools-personal-migration-help-text" style="display: none">
             <h3><?php echo esc_html_x( "Personal Migration", 'Optional Documentation', 'disciple_tools' ) ?></h3>
-            <p><?php echo esc_html_x( "Personal contacts and groups that you have access to can be exported and imported with this tool between Disciple Tools systems. Access contacts are controlled by the Disciple Tools administrators and can only be exported by them.", 'Optional Documentation', 'disciple_tools' ) ?></p>
+            <p><?php echo esc_html_x( "Copy your contacts and groups to another Disciple Tools system.", 'Optional Documentation', 'disciple_tools' ) ?></p>
+            <p>
+                - <?php echo esc_html_x( "2000 Contact Limit", 'Optional Documentation', 'disciple_tools' ) ?><br>
+                - <?php echo esc_html_x( "1000 Group Limit", 'Optional Documentation', 'disciple_tools' ) ?>
+            </p>
+            <hr>
+            <strong>Instructions:</strong><br>
+            <ul>
+                <li><?php echo esc_html_x( "Enable Export", 'Optional Documentation', 'disciple_tools' ) ?></li>
+                <li><?php echo esc_html_x( "Copy URL", 'Optional Documentation', 'disciple_tools' ) ?></li>
+                <li><?php echo esc_html_x( "Go to the system you are moving to", 'Optional Documentation', 'disciple_tools' ) ?></li>
+                <li><?php echo esc_html_x( "Click import", 'Optional Documentation', 'disciple_tools' ) ?></li>
+                <li><?php echo esc_html_x( "Enter the URL you copied", 'Optional Documentation', 'disciple_tools' ) ?></li>
+            </ul>
+            <hr>
         </div>
         <?php
     }

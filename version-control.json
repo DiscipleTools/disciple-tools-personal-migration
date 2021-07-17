@@ -23,7 +23,7 @@
     "high": "https://raw.githubusercontent.com/DiscipleTools/disciple-tools-personal-migration/master/documentation/banner.png"
   },
   "sections": {
-    "description": "Allow import and export of contacts and groups by users for their contacts and groups.",
+    "description": "Allow users to migrate their contacts and groups to another Disciple Tools system. This plugin adds a section to the\nusers settings page and allows them to a personal migration to another system.",
     "installation": "(Required) You must have Disciple.Tools Theme installed before using this plugin. Once Disciple.Tools is installed, you can use the normal Plugin system to install the plugin.",
     "changelog": ""
   }

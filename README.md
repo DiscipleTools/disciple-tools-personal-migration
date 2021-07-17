@@ -3,7 +3,7 @@
 # Disciple Tools - Personal Migration
 
 Allow users to migrate their contacts and groups to another Disciple Tools system. This plugin adds a section to the
-users settings page and allows them to a personal migration to anoter system.
+users settings page and allows them to a personal migration to another system.
 
 ## Purpose
 
@@ -49,4 +49,4 @@ system for git. For a more details on contribution see the
 
 ## Screenshots
 
-![screenshot](documentation/community/starter-banners/banner-blue-green.png)
+![screenshot](documentation/banner.png)
