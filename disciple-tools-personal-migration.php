@@ -5,7 +5,7 @@
  * Description: Disciple Tools - Personal Migration is intended to help developers and integrator jumpstart their extension of the Disciple Tools system.
  * Text Domain: disciple-tools-personal-migration
  * Domain Path: /languages
- * Version:  0.1
+ * Version:  0.2
  * Author URI: https://github.com/DiscipleTools
  * GitHub Plugin URI: https://github.com/DiscipleTools/disciple-tools-personal-migration
  * Requires at least: 4.7.0
@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return object|bool
  */
 function dt_personal_migration() {
-    $dt_personal_migration_required_dt_theme_version = '1.7.0';
+    $dt_personal_migration_required_dt_theme_version = '1.8.1';
     $wp_theme = wp_get_theme();
     $version = $wp_theme->version;
 
