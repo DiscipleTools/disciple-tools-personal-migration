@@ -281,8 +281,6 @@ class DT_Personal_Migration_Endpoints
         foreach ( $data[$post_type]['source_posts'] as $index => $contact ) {
             $pm_transfer_key = hash( 'sha256', $data['source'] . $contact['ID'] );
 
-            $new_contact = false;
-
             if ( ! in_array( $pm_transfer_key, $already_transferred ) ) { // if not already created
                 // create contact
                 $fields = [
@@ -305,15 +303,15 @@ class DT_Personal_Migration_Endpoints
 
                 // transfer contact data to new post_id
                 $new_contact = DT_Posts::create_post( $post_type, $fields, true, false );
-            }
 
-            if ( is_wp_error( $new_contact ) && empty( $new_contact ) ) { // if error or already added
-                dt_write_log( $new_contact );
-            }
-            else {
-                // move source to transferred
-                $data['map'][$contact['ID']] = $new_contact['ID'];
-                $data[$post_type]['transferred_posts'][$new_contact['ID']] = $contact;
+                if ( is_wp_error( $new_contact ) && empty( $new_contact ) ) { // if error or already added
+                    dt_write_log( $new_contact );
+                }
+                else {
+                    // move source to transferred
+                    $data['map'][$contact['ID']] = $new_contact['ID'];
+                    $data[$post_type]['transferred_posts'][$new_contact['ID']] = $contact;
+                }
             }
 
             // unset source
