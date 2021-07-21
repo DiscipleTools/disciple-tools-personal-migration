@@ -242,10 +242,10 @@ class DT_Personal_Migration_Endpoints
 
         // Development override
         $arr = array(
-//            "ssl" =>array(
-//                "verify_peer" =>false,
-//                "verify_peer_name" =>false,
-//            ),
+            "ssl" =>array(
+                "verify_peer" =>false,
+                "verify_peer_name" =>false,
+            ),
         );
 
         $json_package = file_get_contents( $data['url'], false, stream_context_create( $arr ) );
@@ -471,7 +471,6 @@ class DT_Personal_Migration_Endpoints
             foreach ($comment_set as $comment_data) {
                 // map new post id
                 if ( !isset( $map[$comment_data['comment_post_ID']] )) {
-                    dt_write_log( 'Failed to find matching source post id.' );
                     continue;
                 }
                 $comment_post_id = $map[$comment_data['comment_post_ID']];
@@ -551,7 +550,7 @@ class DT_Personal_Migration_Endpoints
             }
 
             // move source to transferred
-            $data[$post_type]['transferred_comments'][$map[$index]] = $comment_set;
+            $data[$post_type]['transferred_comments'][$index] = $comment_set;
 
             // unset source
             unset( $data[$post_type]['source_comments'][$index] );

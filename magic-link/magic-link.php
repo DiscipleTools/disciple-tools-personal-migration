@@ -95,10 +95,10 @@ class DT_Personal_Migration_Magic_Link  {
         $contact_limit = 2000;
         $groups_limit = 1000;
 
-//        $data = get_transient( __METHOD__ . $this->user_id );
-//        if ( $data ) {
-//            return $data;
-//        }
+        $data = get_transient( __METHOD__ . $this->user_id );
+        if ( $data ) {
+            return $data;
+        }
 
         global $wpdb;
         $list_contacts = $wpdb->get_results( $wpdb->prepare(
@@ -155,7 +155,7 @@ class DT_Personal_Migration_Magic_Link  {
             $data[$row['post_type']]['source_posts_total']++;
         }
 
-//        set_transient( __METHOD__ . $this->user_id, $data, MINUTE_IN_SECONDS * 5 );
+        set_transient( __METHOD__ . $this->user_id, $data, MINUTE_IN_SECONDS * 5 );
 
         return $data;
     }
