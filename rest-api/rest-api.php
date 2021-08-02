@@ -230,6 +230,78 @@ class DT_Personal_Migration_Endpoints
                     ];
                 }
 
+            case 'csv_upload':
+                $result = $this->csv_upload( $params['data'] );
+                if ( is_wp_error( $result ) ) {
+                    return $result;
+                }
+                else if ( $result ) {
+                    return [
+                        'message' => 'Successfully saved csv!',
+                        'next_action' => 'csv_install',
+                    ];
+                }
+                else {
+                    return [
+                        'message' => 'Loop',
+                        'next_action' => 'csv_upload',
+                    ];
+                }
+
+            case 'csv_install':
+                $result = $this->csv_install();
+                if ( is_wp_error( $result ) ) {
+                    return $result;
+                }
+                else if ( $result ) {
+                    return [
+                        'message' => 'Successfully installed records!',
+                        'next_action' => 'csv_meta',
+                    ];
+                }
+                else {
+                    return [
+                        'message' => 'Loop',
+                        'next_action' => 'csv_install',
+                    ];
+                }
+
+            case 'csv_meta':
+                $result = $this->csv_meta();
+                if ( is_wp_error( $result ) ) {
+                    return $result;
+                }
+                else if ( $result ) {
+                    return [
+                        'message' => 'Successfully installed csv record details!',
+                        'next_action' => 'csv_location',
+                    ];
+                }
+                else {
+                    return [
+                        'message' => 'Loop',
+                        'next_action' => 'csv_meta',
+                    ];
+                }
+
+            case 'csv_location':
+                $result = $this->csv_location();
+                if ( is_wp_error( $result ) ) {
+                    return $result;
+                }
+                else if ( $result ) {
+                    return [
+                        'message' => 'Successfully installed csv locations!',
+                        'next_action' => false,
+                    ];
+                }
+                else {
+                    return [
+                        'message' => 'Loop',
+                        'next_action' => 'csv_location',
+                    ];
+                }
+
             default:
                 return new WP_Error( __METHOD__, "Missing action param", [ 'status' => 400 ] );
         }
@@ -819,6 +891,395 @@ class DT_Personal_Migration_Endpoints
                 'next_action' => false,
             ];
         }
+    }
+
+    public function csv_upload( $csv_data ) {
+        if ( ! isset( $csv_data['headers'], $csv_data['data'], $csv_data['post_type'] ) ) {
+            return new WP_Error( __METHOD__, 'Missing expected params.', [ 'status' => 400 ] );
+        }
+
+        // @todo test headers for including a title field. Fail if no title field.
+
+        // @todo test headers to match post_type fields. Fail if mismatch expected fields.
+
+        $source_posts = [];
+        foreach ( $csv_data['data'] as $index => $values ) {
+            $source_posts[$index] = [];
+            foreach ( $values as $i => $v ) {
+                $source_posts[$index][$csv_data['headers'][$i]] = $v;
+            }
+        }
+
+        $data = [
+            'post_type' => $csv_data['post_type'],
+            'source_posts' => $source_posts,
+            'transferred_posts' => [],
+            'location_posts' => [],
+            'not_transferred' => []
+        ];
+
+        set_transient( 'dt_personal_migration_csv_' . get_current_user_id(), $data, HOUR_IN_SECONDS );
+
+        return true;
+    }
+
+    public function csv_install(){
+        $data = get_transient( 'dt_personal_migration_csv_' . get_current_user_id() );
+        if ( ! isset( $data['source_posts'] ) || empty( $data['source_posts'] ) ) {
+            return true;
+        }
+        $post_type = $data['post_type'];
+        $loop_limit = 100;
+
+        $total = count( $data['source_posts'] );
+        $loop = 0;
+        foreach ( $data['source_posts'] as $index => $record ) {
+            $fields = [];
+
+            // Name (required)
+            if ( !isset( $record['name'] ) ) {
+                continue;
+            }
+            $fields['name'] = $record['name'];
+            unset( $record['name'] );
+
+
+            /**
+             * Assigned To
+             * Supports assigned_to int (user_id), or (user_email), assigns to current user
+             */
+            if ( isset( $record['assigned_to'] ) && is_numeric( $record['assigned_to'] ) ) {
+                $fields['assigned_to'] = $record['assigned_to'];
+
+            }
+            else if ( isset( $record['assigned_to'] ) && is_email( $record['assigned_to'] ) ) {
+                $user = get_user_by( 'email', $record['assigned_to'] );
+                if ( $user ) {
+                    $fields['assigned_to'] = $user->ID;
+                }
+            }
+            if ( ! isset( $fields['assigned_to'] ) ) {
+                $fields['assigned_to'] = get_current_user_id();
+            }
+            else {
+                unset( $record['assigned_to'] );
+            }
+
+            /**
+             * Status
+             */
+            if ( isset( $record['overall_status'], $record['group_status'], $record['status'] ) ) {
+                if ( 'contacts' === $post_type) {
+                    $fields['overall_status'] = $record['overall_status'] ?? 'new';
+                    unset( $record['overall_status'] );
+                }
+                else if ( 'groups' === $post_type){
+                    $fields['group_status'] = $record['group_status'] ?? 'active';
+                    unset( $record['group_status'] );
+                }
+                else {
+                    $fields['status'] = $record['status'] ?? 'active';
+                    unset( $record['status'] );
+                }
+            }
+
+            /**
+             * Set type
+             */
+            if ( 'contacts' === $post_type ) {
+                if ( isset( $record['type'] ) && ! empty( $record['type'] ) ) {
+                    $fields['type'] = $record['type'];
+                    unset( $record['type'] );
+                } else {
+                    $fields['type'] = 'personal';
+                }
+            }
+            else if ( 'groups' === $post_type ) {
+                if ( isset( $record['group_type'] ) && ! empty( $record['group_type'] ) ) {
+                    $fields['group_type'] = $record['group_type'];
+                    unset( $record['group_type'] );
+                } else {
+                    $fields['group_type'] = 'group';
+                }
+            }
+
+            // transfer contact data to new post_id
+            $new_contact = DT_Posts::create_post( $post_type, $fields, true, false );
+
+            if ( is_wp_error( $new_contact ) && empty( $new_contact ) ) { // if error or already added
+                dt_write_log( $new_contact );
+            }
+            else {
+                // move source to transferred
+                $data['transferred_posts'][$new_contact['ID']] = $record;
+            }
+
+            // unset source
+            unset( $data['source_posts'][$index] );
+
+            $loop++;
+            if ( $loop > $loop_limit ) {
+                break;
+            }
+        }
+
+        set_transient( 'dt_personal_migration_csv_' . get_current_user_id(), $data, HOUR_IN_SECONDS ); // save modified array
+
+        return ! ( $total > $loop_limit );
+    }
+
+    public function csv_meta(){
+        $data = get_transient( 'dt_personal_migration_csv_' . get_current_user_id() );
+        $post_type = $data['post_type'];
+        if ( ! isset( $data['transferred_posts'] ) || empty( $data['transferred_posts'] ) ) {
+            return [
+                'message' => 'Successfully installed csv_meta.!',
+                'next_action' => false,
+            ];
+        }
+        $loop_limit = 100;
+
+        $post_type_fields = DT_Posts::get_post_field_settings( $post_type );
+
+        $total = count( $data['transferred_posts'] );
+        $loop = 0;
+        foreach ( $data['transferred_posts'] as $post_id => $record ) {
+            // set variables
+            $fields = [];
+            if ( ! isset( $data['not_transferred'][$post_id] ) ) {
+                $data['not_transferred'][$post_id] = [];
+            }
+            if ( ! isset( $data['transferred_connections'][$post_id] ) ) {
+                $data['transferred_connections'][$post_id] = [];
+            }
+
+            // loop fields
+            foreach ( $record as $k => $v ) {
+
+                if ( ! isset( $post_type_fields[$k] ) ) {
+                    continue;
+                }
+                if ( in_array( $k, [ 'name', 'post_title' ] ) ) {
+                    continue;
+                }
+                if ( in_array( $k, [ 'location_grid', 'location_grid_meta', 'contact_address', 'lnglat' ] ) ) {
+                    $data['location_posts'][$post_id] = $data['transferred_posts'][$post_id];
+                    continue;
+                }
+                if ( in_array( $post_type_fields[$k]['type'], [ 'connection' ] ) ) {
+                    continue;
+                }
+                if ( in_array( $post_type_fields[$k]['type'], [ 'user_select' ] ) ) {
+                    $data['not_transferred'][$post_id][$k] = $v;
+                    continue;
+                }
+
+                // build field for update
+                if ( in_array( $post_type_fields[$k]['type'], [ 'tags', 'multi_select' ] ) ) {
+                    $values = explode( ';', $v );
+                    $fields[$k] = [];
+                    $fields[$k]['values'] = [];
+                    foreach ($values as $item ) {
+                        $fields[$k]['values'][] = [ 'value' => $item ];
+                    }
+                }
+                else if ( $post_type_fields[$k]['type'] === 'communication_channel' ) {
+                    $fields[$k] = [];
+                    $fields[$k] = [
+                        [ 'value' => $v ]
+                    ];
+                }
+                else if ( in_array( $post_type_fields[$k]['type'], [ 'text', 'number', 'boolean' ] ) ) {
+                    $fields[$k] = $v;
+                }
+                else if ( in_array( $post_type_fields[$k]['type'], [ 'key_select' ] ) ) {
+                    $fields[$k] = $v;
+                }
+                else {
+                    $data['not_transferred'][$post_id][$k] = $v;
+                }
+            }
+
+            // transfer contact data to new post_id
+            $updated_contact = DT_Posts::update_post( $post_type, $post_id, $fields, true, false );
+            if ( is_wp_error( $updated_contact ) ) {
+                dt_write_log( $updated_contact );
+            }
+            else {
+                unset( $data['transferred_posts'][$post_id] );
+            }
+
+            $loop++;
+            if ( $loop > $loop_limit ) {
+                break;
+            }
+        }
+
+        set_transient( 'dt_personal_migration_csv_' . get_current_user_id(), $data, HOUR_IN_SECONDS ); // save modified array
+
+        return ! ( $total > $loop_limit );
+    }
+
+    public function csv_location(){
+        $data = get_transient( 'dt_personal_migration_csv_' . get_current_user_id() );
+        $post_type = $data['post_type'];
+        if ( ! isset( $data['location_posts'] ) || empty( $data['location_posts'] ) ) {
+            return [
+                'message' => 'Successfully added locations from csv!',
+                'next_action' => false,
+            ];
+        }
+        $loop_limit = 25;
+
+        $post_type_fields = DT_Posts::get_post_field_settings( $post_type );
+
+        $total = count( $data['location_posts'] );
+        $loop = 0;
+        foreach ( $data['location_posts'] as $post_id => $record ) {
+            // set variables
+            $fields = [];
+
+            // loop fields
+            foreach ( $record as $k => $v ) {
+
+                if ( ! isset( $post_type_fields[$k] ) ) {
+                    continue;
+                }
+                if ( in_array( $k, [ 'name', 'post_title' ] ) ) {
+                    continue;
+                }
+                if ( in_array( $post_type_fields[$k]['type'], [ 'connection', 'tags', 'multi_select', 'user_select', 'text', 'number', 'boolean', 'key_select' ] ) ) {
+                    continue;
+                }
+                if ( in_array( $post_type_fields[$k]['type'], [ 'communication_channel' ] ) && ! 'contact_address' === $k ) {
+                    continue;
+                }
+
+                // build field for update
+                if ( $post_type_fields[$k]['type'] === 'communication_channel' && 'contact_address' === $k ) {
+
+                    if ( DT_Mapbox_API::get_key() ) {
+
+                        $result = DT_Mapbox_API::forward_lookup( $v );
+                        if ( false !== $result ) {
+
+                            $lng = DT_Mapbox_API::parse_raw_result( $result, 'lng', true );
+                            $lat = DT_Mapbox_API::parse_raw_result( $result, 'lat', true );
+
+                            $geocoder = new Location_Grid_Geocoder();
+                            $grid_row = $geocoder->get_grid_id_by_lnglat( $lng, $lat );
+
+                            if ( isset( $grid_row['grid_id'] ) ) {
+                                $grid_id = $grid_row['grid_id'];
+
+                                $level = '';
+                                $label = $v;
+
+                                $location_meta_grid = [];
+                                Location_Grid_Meta::validate_location_grid_meta( $location_meta_grid );
+
+                                $location_meta_grid['post_id'] = $post_id;
+                                $location_meta_grid['post_type'] = $post_type;
+                                $location_meta_grid['grid_id'] = $grid_id;
+                                $location_meta_grid['lng'] = $lng;
+                                $location_meta_grid['lat'] = $lat;
+                                $location_meta_grid['level'] = $level;
+                                $location_meta_grid['label'] = $label;
+
+                                $potential_error = Location_Grid_Meta::add_location_grid_meta( $post_id, $location_meta_grid );
+                            } // success grid id
+                        } // valid result
+                    } // mapbox key exists
+                    else {
+                        $fields[$k] = [];
+                        $fields[$k] = [
+                            [ 'value' => $v ]
+                        ];
+                    }
+                }
+                else if ( 'lnglat' === $k ) {
+                    // must be lng,lat
+                    // single field with the comma delimiter and order is longitude then latitude.
+                    $lnglat = explode( ',', $v );
+                    $lng = $lnglat[0] ?? false;
+                    $lat = $lnglat[1] ?? false;
+
+                    if ( $lng && $lat ) {
+                        $geocoder = new Location_Grid_Geocoder();
+                        $grid_row = $geocoder->get_grid_id_by_lnglat( $lng, $lat );
+
+                        if ( isset( $grid_row['grid_id'] ) ) {
+                            $grid_id = $grid_row['grid_id'];
+
+                            $level = 'address';
+                            $label = $v;
+
+                            $location_meta_grid = [];
+                            Location_Grid_Meta::validate_location_grid_meta( $location_meta_grid );
+
+                            $location_meta_grid['post_id'] = $post_id;
+                            $location_meta_grid['post_type'] = $post_type;
+                            $location_meta_grid['grid_id'] = $grid_id;
+                            $location_meta_grid['lng'] = $lng;
+                            $location_meta_grid['lat'] = $lat;
+                            $location_meta_grid['level'] = $level;
+                            $location_meta_grid['label'] = $label;
+
+                            $potential_error = Location_Grid_Meta::add_location_grid_meta( $post_id, $location_meta_grid );
+                        } // success grid id
+                    }
+                }
+                else if ( 'location_grid' === $k ) {
+                    if ( DT_Mapbox_API::get_key() ) {
+                        $grid_row = Disciple_Tools_Mapping_Queries::get_by_grid_id( $v );
+                        if ( $grid_row ) {
+                            $grid_full_name = Disciple_Tools_Mapping_Queries::get_full_name_by_grid_id( $v );
+
+                            $location_meta_grid = [];
+                            Location_Grid_Meta::validate_location_grid_meta( $location_meta_grid );
+
+                            $location_meta_grid['post_id'] = $post_id;
+                            $location_meta_grid['post_type'] = $post_type;
+                            $location_meta_grid['grid_id'] = $grid_row['grid_id'];
+                            $location_meta_grid['lng'] = $grid_row['longitude'];
+                            $location_meta_grid['lat'] = $grid_row['latitude'];
+                            $location_meta_grid['level'] = $grid_row['level_name'];
+                            $location_meta_grid['label'] = $grid_full_name;
+
+                            $potential_error = Location_Grid_Meta::add_location_grid_meta( $post_id, $location_meta_grid );
+                        }
+                    } else {
+                        $grid_ids = explode( ';', $v );
+                        $fields[$k] = [];
+                        $fields[$k]['values'] = [];
+                        foreach ($grid_ids as $item ) {
+                            $fields[$k]['values'][] = [ 'value' => $item ];
+                        }
+                    }
+                }
+                else {
+                    $data['not_transferred'][$post_id][$k] = $v;
+                }
+            }
+
+            // transfer contact data to new post_id
+            $updated_contact = DT_Posts::update_post( $post_type, $post_id, $fields, true, false );
+            if ( is_wp_error( $updated_contact ) ) {
+                dt_write_log( $updated_contact );
+            }
+            else {
+                unset( $data['location_posts'][$post_id] );
+            }
+
+            $loop++;
+            if ( $loop > $loop_limit ) {
+                break;
+            }
+        }
+
+        set_transient( 'dt_personal_migration_csv_' . get_current_user_id(), $data, HOUR_IN_SECONDS ); // save modified array
+
+        return ! ( $total > $loop_limit );
     }
 
     public function dt_custom_fields_settings( $fields, $post_type ){
