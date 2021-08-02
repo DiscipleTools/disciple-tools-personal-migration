@@ -19,7 +19,14 @@ class DT_Personal_Migration_Settings_Tile
             add_action( 'dt_profile_settings_page_menu', [ $this, 'dt_profile_settings_page_menu' ], 100, 4 );
             add_action( 'dt_profile_settings_page_sections', [ $this, 'dt_profile_settings_page_sections' ], 100, 4 );
             add_action( 'dt_modal_help_text', [ $this, 'dt_modal_help_text' ], 100 );
+            add_action( 'dt_modal_help_text', [ $this, 'dt_modal_help_text' ], 100 );
+            add_action( 'wp_enqueue_scripts', [ $this, 'wp_enqueue_scripts' ], 99 );
         }
+    }
+
+    public function wp_enqueue_scripts() {
+        wp_register_script( 'jquery-csv-js', 'https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.21/jquery.csv.min.js', [ 'jquery' ], '1.0.21' );
+        wp_enqueue_script( 'jquery-csv-js' );
     }
 
     public function dt_custom_fields_settings( $fields, $post_type ){
@@ -66,6 +73,24 @@ class DT_Personal_Migration_Settings_Tile
         if ( $dt_personal_migration_is_enabled ) {
             $app_url = $app_url_base . $dt_personal_migration_is_enabled;
         }
+
+        $pm_contact_fields = DT_Posts::get_post_field_settings( 'contacts' );
+        $pm_contact_fields_notes = '';
+        foreach ( $pm_contact_fields as $pm_index => $pm_field ) {
+            if ( in_array( $pm_field['type'], [ 'task', 'connection', 'user_select' ] ) ) {
+                continue;
+            }
+            $pm_contact_fields_notes .= '<tr><td>'.$pm_index.'</td><td>'.$pm_field['type'].'</td></tr>';
+        }
+        $pm_group_fields = DT_Posts::get_post_field_settings( 'groups' );
+        $pm_group_fields_notes = '';
+        foreach ( $pm_group_fields as $pm_index => $pm_field ) {
+            if ( in_array( $pm_field['type'], [ 'task', 'connection', 'user_select' ] ) ) {
+                continue;
+            }
+            $pm_group_fields_notes .= '<tr><td>'.$pm_index.'</td><td>'.$pm_field['type'].'</td></tr>';
+        }
+
         ?>
         <style>
             .dt_personal_migration_hide {
@@ -80,8 +105,8 @@ class DT_Personal_Migration_Settings_Tile
             <span class="section-header"><?php esc_html_e( 'Personal Migration', 'disciple_tools' )?></span>
 
             <hr/>
-
-            <button type="button" class="button" id="dt_personal_migration_import_button">Import</button>
+            <h4>Transfer Between Sites</h4>
+            <button type="button" class="button" id="dt_personal_migration_import_button">Transfer</button>
             <button type="button" class="button" id="dt_personal_migration_export_button"><?php echo empty( $dt_personal_migration_is_enabled ) ? esc_html( 'Enable Export' ) : esc_html( 'Disable Export' ); ?></button>
             <span class="loading-spinner"></span>
             <div id="dt_personal_migration_export_link" class="<?php echo empty( $dt_personal_migration_is_enabled ) ? 'dt_personal_migration_hide' : ''; ?>">
@@ -93,8 +118,12 @@ class DT_Personal_Migration_Settings_Tile
                     </div>
                 </div>
             </div>
+            <div>
+                <h4>Import File</h4>
+                <button type="button" class="button" id="dt_personal_migration_import_csv">Import CSV</button> <button type="button" class="button hollow" id="dt_personal_migration_import_csv_template">Show Fields</button>
+            </div>
             <script>
-                jQuery(document).ready(function(){
+                jQuery(document).ready(function($){
                     jQuery('#dt_personal_migration_import_button').on('click', function(){
                         let title = jQuery('#modal-large-title')
                         let content = jQuery('#modal-large-content')
@@ -234,6 +263,170 @@ class DT_Personal_Migration_Settings_Tile
                             document.getSelection().addRange(selected);
                         }
                         alert('Copied')
+                    })
+
+                    jQuery('#dt_personal_migration_import_csv').on('click', function(){
+                        let title = jQuery('#modal-large-title')
+                        let content = jQuery('#modal-large-content')
+
+                        title.empty().html(`Import CSV File`)
+
+                        if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
+                            content.empty().html(
+                                `<div class="grid-x">
+                                    <div class="cell">
+                                        Your browser do not support File Upload
+                                    </div>
+                                </div>`
+                                )
+                                return;
+                        }
+                        let post_types = [{label: 'Contacts', post_type: 'contacts'}, {label: 'Groups', post_type: 'groups'}]
+                        let pt_select = ''
+                        jQuery.each(post_types, function(i,v){
+                            pt_select += '<option value="'+v.post_type+'">'+v.label+'</option>'
+                        })
+                        content.empty().html(
+                            `<div class="grid-x">
+                                <div class="cell">
+                                    <select id="dt-personal-migration-post-type">
+                                    ${pt_select}
+                                    </select>
+                                </div>
+                                <div class="cell">
+                                    <label for="dt-personal-migration-file" class="button">Upload File</label>
+                                    <input type="file" id="dt-personal-migration-file" class="show-for-sr">
+                                </div>
+                                <div id="dt-personal-migration-csv-progress"></div>
+                            </div>`
+                        )
+
+                        jQuery('#modal-large').foundation('open')
+
+                        jQuery('#dt-personal-migration-file').on('change', function(evt) {
+                            var f = evt.target.files[0];
+                            if (f) {
+                                var r = new FileReader();
+                                r.onload = function(e) {
+                                    window.csv_array = $.csv.toArrays(e.target.result)
+
+                                    let header_count = window.csv_array[0].length
+                                    let headers = window.csv_array[0]
+
+                                    let progress = jQuery('#dt-personal-migration-csv-progress')
+                                    progress.append(
+                                        `<div class="cell" id="dt-personal-migration-csv_upload"><span class="loading-spinner active"></span></div>
+                                        <div class="cell" id="dt-personal-migration-csv_install"><span class="loading-spinner active"></span></div>
+                                        <div class="cell" id="dt-personal-migration-csv_meta"><span class="loading-spinner active"></span></div>
+                                        <div class="cell" id="dt-personal-migration-csv_location"><span class="loading-spinner active"></span></div>
+                                        `
+                                    )
+
+                                    let validate = true
+                                    jQuery.each(window.csv_array, function(i,v){
+                                        if ( header_count !== v.length ) {
+                                            progress.append(`The header count and columns count did not match for this line: <br>${v}<br><br>`)
+                                            jQuery('.loading-spinner').removeClass('active')
+                                            validate = false
+                                        }
+                                    })
+                                    if ( ! validate ) {
+                                        return
+                                    }
+
+                                     window.csv_array.shift()
+
+                                    let post_type = jQuery('#dt-personal-migration-post-type').val()
+
+                                    makeRequest('post', 'endpoint', {
+                                        action: 'csv_upload',
+                                        data: {
+                                            headers: headers,
+                                            header_count: header_count,
+                                            post_type: post_type,
+                                            data: window.csv_array
+                                        } }, 'dt_personal_migration/v1/')
+                                        .done(function(response) {
+                                            jQuery('#dt-personal-migration-csv_upload').html(response.message)
+
+                                            if ( response.next_action ) {
+                                                csv_installer( response.next_action )
+                                            }
+
+                                        })
+                                        .fail(function (err) {
+                                            progress.html(`Data failed in collection from other system!<br><br> ` + err.responseText)
+                                            console.log("error");
+                                            console.log(err);
+                                        });
+                                }
+                                r.readAsText(f);
+                            } else {
+                                alert("Failed to load file");
+                            }
+                        })
+
+                        function csv_installer( action ) {
+                            makeRequest('post', 'endpoint', { action: action }, 'dt_personal_migration/v1/')
+                                .done(function(data) {
+                                    console.log(data)
+                                    if ( data.message === 'Loop' ) {
+                                        jQuery('#dt-personal-migration-'+action).append(`<span class="loading-spinner active"></span>`)
+                                    }
+                                    else {
+                                        jQuery('#dt-personal-migration-'+action).html(data.message)
+                                    }
+
+                                    if ( data.next_action ) {
+                                        csv_installer( data.next_action )
+                                    }
+                                })
+                                .fail(function (err) {
+                                    jQuery('#dt-personal-migration-'+action).html(data.message).append(stringify(err))
+                                    console.log("error");
+                                    console.log(err);
+                                });
+                        }
+
+
+
+                    })
+
+                    jQuery('#dt_personal_migration_import_csv_template').on('click', function() {
+                        let title = jQuery('#modal-large-title')
+                        let content = jQuery('#modal-large-content')
+
+                        title.empty().html(`Available Fields`)
+
+                        content.empty().html(
+                            `
+                            <ul>
+                            <li>The 'name' field is required for CSV import.</li>
+                            <li>The first row in the csv must be the column names written as shown below.</li>
+                            <li>'Multi-select' and 'Tags' fields can have multiple value separated by ;.</li>
+                            <li> 'contact_address' field will be geocoded with Mapbox if the mapbox key is installed in the system.</li>
+                            </ul>
+                            For more documentation, see <a href="https://github.com/DiscipleTools/disciple-tools-personal-migration/wiki/CSV-Import">plugin website</a>.
+                            <hr>
+                            <div class="grid-x">
+                                <div class="cell medium-6">
+                                    <h3>Contacts</h3>
+                                    <table>
+                                    <thead><tr><td>Column Names</td><td>Value Type</td></tr></thead>
+                                    <tbody><?php echo $pm_contact_fields_notes; // @phpcs:ignore ?></tbody></table>
+                                </div>
+                                <div class="cell medium-6">
+                                    <h3>Groups</h3>
+                                    <table>
+                                    <thead><tr><td>Column Names</td><td>Value Type</td></tr></thead>
+                                    <tbody><?php echo $pm_group_fields_notes; // @phpcs:ignore ?></tbody></table>
+                                </div>
+                            </div>
+                            `
+                        )
+
+                        jQuery('#modal-large').foundation('open')
+
                     })
                 })
             </script>
