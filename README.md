@@ -21,12 +21,14 @@ includes all contacts and groups that are shared with the user.
 - Copy 1000 groups and details
 - Copy all associated comments
 - Rebuilds generational connections and cross-references
+- Imports CSV contacts and groups
 
 #### Will Not Do
 
 - Does not copy contacts labeled "access" unless granted access
 - Limited to 2000 contacts per site
 - Limited to 1000 groups per site
+- Consider CSV for larger lists (but no cross connection supported with CSV)
 
 ## Requirements
 
