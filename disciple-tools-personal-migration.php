@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Disciple Tools - Personal Migration
+ *Plugin Name: Disciple.Tools - Personal Migration
  * Plugin URI: https://github.com/DiscipleTools/disciple-tools-personal-migration
  * Description: Disciple Tools - Personal Migration is intended to help developers and integrator jumpstart their extension of the Disciple Tools system.
  * Text Domain: disciple-tools-personal-migration
