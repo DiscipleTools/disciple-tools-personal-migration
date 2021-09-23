@@ -442,7 +442,7 @@ class DT_Personal_Migration_Settings_Tile
         ?>
         <div class="help-section" id="disciple-tools-personal-migration-help-text" style="display: none">
             <h3><?php echo esc_html_x( "Personal Migration", 'Optional Documentation', 'disciple_tools' ) ?></h3>
-            <p><?php echo esc_html_x( "Copy your contacts and groups to another Disciple Tools system.", 'Optional Documentation', 'disciple_tools' ) ?></p>
+            <p><?php echo esc_html_x( "Copy your contacts and groups to another Disciple.Tools system.", 'Optional Documentation', 'disciple_tools' ) ?></p>
             <p>
                 - <?php echo esc_html_x( "2000 Contact Limit", 'Optional Documentation', 'disciple_tools' ) ?><br>
                 - <?php echo esc_html_x( "1000 Group Limit", 'Optional Documentation', 'disciple_tools' ) ?>

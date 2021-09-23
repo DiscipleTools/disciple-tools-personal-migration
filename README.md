@@ -1,9 +1,9 @@
 [![Build Status](https://travis-ci.com/DiscipleTools/disciple-tools-personal-migration.svg?branch=master)](https://travis-ci.com/DiscipleTools/disciple-tools-personal-migration)
 
 ![Personal Migration](https://raw.githubusercontent.com/DiscipleTools/disciple-tools-personal-migration/master/documentation/personal-migration-banner.png)
-# Disciple Tools - Personal Migration
+# Disciple.Tools - Personal Migration
 
-Allow users to migrate their contacts and groups to another Disciple Tools system. This plugin adds a section to the
+Allow users to migrate their contacts and groups to another Disciple.Tools system. This plugin adds a section to the
 users settings page and allows them to a personal migration to another system.
 
 ## Purpose
@@ -33,7 +33,7 @@ includes all contacts and groups that are shared with the user.
 
 ## Requirements
 
-- Disciple Tools Theme installed on a Wordpress Server
+- Disciple.Tools Theme installed on a Wordpress Server
 
 ## Installing
 

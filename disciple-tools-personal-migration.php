@@ -2,7 +2,7 @@
 /**
  *Plugin Name: Disciple.Tools - Personal Migration
  * Plugin URI: https://github.com/DiscipleTools/disciple-tools-personal-migration
- * Description: Disciple Tools - Personal Migration is intended to help developers and integrator jumpstart their extension of the Disciple Tools system.
+ * Description: Disciple.Tools - Personal Migration is intended to help developers and integrator jumpstart their extension of the Disciple.Tools system.
  * Text Domain: disciple-tools-personal-migration
  * Domain Path: /languages
  * Version:  0.3
@@ -208,9 +208,9 @@ if ( ! function_exists( 'dt_personal_migration_hook_admin_notice' ) ) {
         global $dt_personal_migration_required_dt_theme_version;
         $wp_theme = wp_get_theme();
         $current_version = $wp_theme->version;
-        $message = "'Disciple Tools - Personal Migration' plugin requires 'Disciple Tools' theme to work. Please activate 'Disciple Tools' theme or make sure it is latest version.";
+        $message = "'Disciple.Tools - Personal Migration' plugin requires 'Disciple.Tools' theme to work. Please activate 'Disciple.Tools' theme or make sure it is latest version.";
         if ( $wp_theme->get_template() === "disciple-tools-theme" ){
-            $message .= ' ' . sprintf( esc_html( 'Current Disciple Tools version: %1$s, required version: %2$s' ), esc_html( $current_version ), esc_html( $dt_personal_migration_required_dt_theme_version ) );
+            $message .= ' ' . sprintf( esc_html( 'Current Disciple.Tools version: %1$s, required version: %2$s' ), esc_html( $current_version ), esc_html( $dt_personal_migration_required_dt_theme_version ) );
         }
         // Check if it's been dismissed...
         if ( ! get_option( 'dismissed-disciple-tools-personal-migration', false ) ) { ?>
