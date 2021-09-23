@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.com/DiscipleTools/disciple-tools-personal-migration.svg?branch=master)](https://travis-ci.com/DiscipleTools/disciple-tools-personal-migration)
 
-![Personal Migration](https://raw.githubusercontent.com/DiscipleTools/disciple-tools-personal-migration/master/documentation/personal-migration-banner.png)
+![Plugin Banner](https://raw.githubusercontent.com/DiscipleTools/disciple-tools-personal-migration/master/documentation/personal-migration-banner.png)
 # Disciple.Tools - Personal Migration
 
 Allow users to migrate their contacts and groups to another Disciple.Tools system. This plugin adds a section to the
