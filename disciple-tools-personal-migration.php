@@ -5,7 +5,7 @@
  * Description: Disciple.Tools - Personal Migration is intended to help developers and integrator jumpstart their extension of the Disciple.Tools system.
  * Text Domain: disciple-tools-personal-migration
  * Domain Path: /languages
- * Version:  0.4
+ * Version:  0.4.1
  * Author URI: https://github.com/DiscipleTools
  * GitHub Plugin URI: https://github.com/DiscipleTools/disciple-tools-personal-migration
  * Requires at least: 4.7.0
