@@ -313,12 +313,12 @@ class DT_Personal_Migration_Endpoints
         }
 
         // Development override
-        $arr = array(
-            "ssl" =>array(
-                "verify_peer" =>false,
-                "verify_peer_name" =>false,
-            ),
-        );
+//        $arr = array(
+//            "ssl" =>array(
+//                "verify_peer" =>false,
+//                "verify_peer_name" =>false,
+//            ),
+//        );
 
         $json_package = file_get_contents( $data['url'], false, stream_context_create( $arr ) );
         if ( ! $json_package ) {
@@ -334,7 +334,8 @@ class DT_Personal_Migration_Endpoints
 
         return [
             'next_action' => 'install_contacts',
-            'message' => 'Successfully installed data!'
+            'message' => 'Successfully installed data!',
+            'data' => $json,
         ];
     }
 
