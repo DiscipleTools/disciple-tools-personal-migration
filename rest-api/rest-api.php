@@ -42,7 +42,8 @@ class DT_Personal_Migration_Endpoints
 
                 return [
                     'next_action' => 'install_contacts',
-                    'message' => 'Successfully transferred and stored data!'
+                    'message' => 'Successfully transferred and stored data!',
+                    'data' => $result,
                 ];
 
             case 'install_contacts':
