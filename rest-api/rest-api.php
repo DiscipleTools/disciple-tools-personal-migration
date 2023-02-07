@@ -314,12 +314,12 @@ class DT_Personal_Migration_Endpoints
         }
 
         // Development override
-//        $arr = array(
-//            "ssl" =>array(
-//                "verify_peer" =>false,
-//                "verify_peer_name" =>false,
-//            ),
-//        );
+        $arr = array(
+            "ssl" =>array(
+                "verify_peer" =>false,
+                "verify_peer_name" =>false,
+            ),
+        );
 
         $json_package = file_get_contents( $data['url'], false, stream_context_create( $arr ) );
         if ( ! $json_package ) {
@@ -342,6 +342,7 @@ class DT_Personal_Migration_Endpoints
 
     public function install( $post_type ){
         $data = get_transient( 'dt_personal_migration_' . get_current_user_id() );
+        dt_write_log( $data );
         if ( ! isset( $data[$post_type]['source_posts'] ) || empty( $data[$post_type]['source_posts'] ) ) {
             return true;
         }

@@ -95,20 +95,13 @@ class DT_Personal_Migration_Magic_Link  {
         $contact_limit = 2000;
         $groups_limit = 1000;
 
-        $data = get_transient( __METHOD__ . $this->user_id );
-        if ( $data ) {
-            return $data;
-        }
-
         global $wpdb;
         $list_contacts = $wpdb->get_results( $wpdb->prepare(
             "SELECT s.post_id, p.post_type
                     FROM $wpdb->dt_share s
                     LEFT JOIN $wpdb->posts p ON s.post_id = p.ID
-                    LEFT JOIN $wpdb->postmeta pm ON pm.post_id = s.post_id AND pm.meta_key = 'type'
                     WHERE s.user_id = %s
                         AND p.post_type = 'contacts'
-                        AND pm.meta_value != 'access'
                     ORDER BY s.post_id DESC
                     LIMIT %d
                     ",
