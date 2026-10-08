@@ -3,7 +3,7 @@ if ( !defined( 'ABSPATH' ) ) { exit; } // Exit if accessed directly.
 
 DT_Personal_Migration_Magic_Link::instance();
 
-class DT_Personal_Migration_Magic_Link  {
+class DT_Personal_Migration_Magic_Link {
 
 
     public $page_title = 'Personal Migration';
@@ -55,7 +55,6 @@ class DT_Personal_Migration_Magic_Link  {
             add_action( 'dt_json_access', [ $this, 'dt_json_access' ] );
             add_action( 'dt_json_content', [ $this, 'dt_json_content' ] ); // body for no post key
         }
-
     }
 
 
@@ -144,7 +143,7 @@ class DT_Personal_Migration_Magic_Link  {
         $data['source'] = site_url();
         foreach ( $list as $row ) {
             $data[$row['post_type']]['source_posts'][$row['post_id']] = DT_Posts::get_post( $row['post_type'], $row['post_id'], true, false );
-            $data[$row['post_type']]['source_comments'][$row['post_id']] = get_comments( ['post_id' => (int) $row['post_id'], 'post_type' => $row['post_type'] ] );
+            $data[$row['post_type']]['source_comments'][$row['post_id']] = get_comments( [ 'post_id' => (int) $row['post_id'], 'post_type' => $row['post_type'] ] );
             $data[$row['post_type']]['source_posts_total']++;
         }
 
@@ -153,4 +152,3 @@ class DT_Personal_Migration_Magic_Link  {
         return $data;
     }
 }
-
